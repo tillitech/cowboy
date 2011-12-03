@@ -75,6 +75,11 @@ media_range(Data, Fun) ->
 				fun (_Rest2, <<>>) -> {error, badarg};
 					(Rest2, SubType) ->
 						media_range_params(Rest2, Fun, Type, SubType, [])
+				end);
+			(Rest, <<"*">> = Type) -> token_ci(<<"*", Rest/binary>>,
+				fun (_Rest2, <<>>) -> {error, badarg};
+					(Rest2, SubType) ->
+						media_range_params(Rest2, Fun, Type, SubType, [])
 				end)
 		end).
 
@@ -590,6 +595,8 @@ quoted_string(<< C, Rest/bits >>, Fun, Acc) ->
 -spec qvalue(binary(), fun()) -> any().
 qvalue(<< $0, $., Rest/bits >>, Fun) ->
 	qvalue(Rest, Fun, 0, 100);
+qvalue(<< $., Rest/bits >>, Fun) ->
+	qvalue(Rest, Fun, 0, 100);
 qvalue(<< $0, Rest/bits >>, Fun) ->
 	Fun(Rest, 0);
 qvalue(<< $1, $., $0, $0, $0, Rest/bits >>, Fun) ->
@@ -682,6 +689,13 @@ nonempty_token_list_test_() ->
 media_range_list_test_() ->
 	%% {Tokens, Result}
 	Tests = [
+		{<<"text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2">>, [
+			{{<<"text">>, <<"html">>, []}, 1000, []},
+			{{<<"image">>, <<"gif">>, []}, 1000, []},
+			{{<<"image">>, <<"jpeg">>, []}, 1000, []},
+			{{<<"*">>, <<"*">>, []}, 200, []},
+			{{<<"*">>, <<"*">>, []}, 200, []}
+		]},
 		{<<"audio/*; q=0.2, audio/basic">>, [
 			{{<<"audio">>, <<"*">>, []}, 200, []},
 			{{<<"audio">>, <<"basic">>, []}, 1000, []}
